@@ -1,38 +1,42 @@
 import streamlit as st
-from streamlit_javascript import st_javascript
 import json
+import os
 
 st.set_page_config(page_title="Referral Generator", layout="centered")
 st.title("💼 LinkedIn Referral Message Generator")
 
-# Step 1: Try reading from browser cookie
-cookie = st_javascript("document.cookie") or ""
-user_profile = {"user_name": "", "user_role": "", "user_intro": ""}
+# -------- File to persist user info --------
+USER_DATA_FILE = "user_data.json"
 
-try:
-    cookie_pairs = [c.strip().split("=") for c in cookie.split(";")]
-    cookie_dict = {k: v for k, v in cookie_pairs if len(k) > 1}
-    if "referral_data" in cookie_dict:
-        user_profile = json.loads(cookie_dict["referral_data"])
-except Exception as e:
-    st.error("Failed to load cookies")
+# -------- Load cached user data --------
+if "user_profile" not in st.session_state:
+    if os.path.exists(USER_DATA_FILE):
+        with open(USER_DATA_FILE, "r") as f:
+            st.session_state.user_profile = json.load(f)
+    else:
+        st.session_state.user_profile = {
+            "user_name": "",
+            "user_role": "",
+            "user_intro": ""
+        }
 
-# Step 2: User Profile Section
+# -------- User Info Section --------
 st.subheader("👤 Your Info")
-user_name = st.text_input("Your Name", value=user_profile.get("user_name", ""))
-user_role = st.text_input("Your Current Role", value=user_profile.get("user_role", ""))
-user_intro = st.text_area("Brief Background", value=user_profile.get("user_intro", ""))
+user_name = st.text_input("Your Name", value=st.session_state.user_profile.get("user_name", ""))
+user_role = st.text_input("Your Current Role", value=st.session_state.user_profile.get("user_role", ""))
+user_intro = st.text_area("Brief Background", value=st.session_state.user_profile.get("user_intro", ""))
 
 if st.button("💾 Save Info"):
-    save_data = json.dumps({
+    st.session_state.user_profile = {
         "user_name": user_name,
         "user_role": user_role,
         "user_intro": user_intro
-    }).replace("'", "\\'")
-    st_javascript(f"document.cookie = 'referral_data={save_data}; path=/'")
-    st.success("✅ Saved to your browser. Will persist across refreshes.")
+    }
+    with open(USER_DATA_FILE, "w") as f:
+        json.dump(st.session_state.user_profile, f)
+    st.success("✅ Info saved. It'll persist even if you refresh the page.")
 
-# Step 3: Referral Form Inputs
+# -------- Referral Request Form --------
 st.subheader("📨 Referral Request")
 recipient_name = st.text_input("Recipient's Name")
 job_title = st.text_input("Job Title")
@@ -40,7 +44,7 @@ company_name = st.text_input("Company Name")
 job_link = st.text_input("Job Link")
 job_id = st.text_input("Job ID (Optional)")
 
-# Step 4: Generate Message
+# -------- Generate Message --------
 if st.button("📋 Generate Message"):
     msg_lines = []
 
@@ -62,6 +66,5 @@ if st.button("📋 Generate Message"):
     msg_lines.append(user_name)
 
     final_message = "\n\n".join(msg_lines)
-
     st.subheader("📎 Copy your message:")
     st.code(final_message, language='markdown')
