@@ -6,15 +6,15 @@ st.title("💼 LinkedIn Referral Message Generator")
 # ------------------ Persistent User Info ------------------
 
 @st.cache_data(show_spinner=False)
-def load_default_user():
+def load_empty_user():
     return {
-        "user_name": "Akshay Gupta",
-        "user_role": "Cloud Engineer at Sprinklr",
-        "user_intro": "I’m currently a Cloud Engineer at Sprinklr, working at the intersection of backend development and cloud infrastructure. I specialize in Node.js and Django and have hands-on experience with distributed systems using Kafka, Redis, and Kubernetes.",
+        "user_name": "",
+        "user_role": "",
+        "user_intro": "",
     }
 
 if "user_profile" not in st.session_state:
-    st.session_state.user_profile = load_default_user()
+    st.session_state.user_profile = load_empty_user()
 
 def save_user_profile():
     st.session_state.user_profile = {
@@ -49,20 +49,18 @@ if st.button("✨ Generate Message"):
     if not all([recipient_name, job_title, company_name, job_link]):
         st.warning("Please fill all required fields marked with *")
     else:
-        # Clean up optional parts
         job_id_line = f"Job ID: {job_id}" if job_id.strip() else ""
         resume_line = f"Here is my resume for reference: {resume_link}" if resume_link.strip() else ""
 
         intro = st.session_state.user_intro.strip()
         name = st.session_state.user_name.strip()
 
-        # Compose message cleanly
         message_parts = [
             f"Hi {recipient_name},",
             f"I hope you’re doing well! I came across an exciting opportunity for a {job_title} role at {company_name}, and I noticed that you’re connected with the company. Given your experience and position, I was wondering if you’d feel comfortable referring me for the role.",
             f"Job Link: {job_link}",
             job_id_line,
-            f"A quick background about me — {intro}",
+            f"A quick background about me — {intro}" if intro else "",
             resume_line,
             "Please let me know if you need any more information or context from my side.",
             "Thanks in advance for your support — I truly appreciate it!",
