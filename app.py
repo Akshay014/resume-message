@@ -1,70 +1,75 @@
 import streamlit as st
-import json
 
-st.set_page_config(page_title="LinkedIn Referral Generator", layout="centered")
+st.set_page_config(page_title="Referral Generator", layout="centered")
 st.title("💼 LinkedIn Referral Message Generator")
 
-st.markdown("Easily create a professional referral message for LinkedIn.")
+# ------------------ Persistent User Info ------------------
 
-# ------------------ Persistent Profile (JSON) ------------------
+@st.cache_data(show_spinner=False)
+def load_default_user():
+    return {
+        "user_name": "Akshay Gupta",
+        "user_role": "Cloud Engineer at Sprinklr",
+        "user_intro": "I’m currently a Cloud Engineer at Sprinklr, working at the intersection of backend development and cloud infrastructure. I specialize in Node.js and Django and have hands-on experience with distributed systems using Kafka, Redis, and Kubernetes.",
+    }
+
+if "user_profile" not in st.session_state:
+    st.session_state.user_profile = load_default_user()
+
+def save_user_profile():
+    st.session_state.user_profile = {
+        "user_name": st.session_state.user_name,
+        "user_role": st.session_state.user_role,
+        "user_intro": st.session_state.user_intro
+    }
+    st.success("✅ Profile saved!")
+
+# ------------------ UI: User Info ------------------
+
 st.subheader("👤 Your Profile")
+st.text_input("Your Name", value=st.session_state.user_profile["user_name"], key="user_name")
+st.text_input("Your Current Role", value=st.session_state.user_profile["user_role"], key="user_role")
+st.text_area("Brief Description", value=st.session_state.user_profile["user_intro"], key="user_intro")
 
-# Try to load saved profile
-profile = {
-    "user_name": "",
-    "user_role": "",
-    "user_intro": ""
-}
+st.button("💾 Save My Info", on_click=save_user_profile)
 
-uploaded_profile = st.file_uploader("Upload saved profile (optional)", type=["json"])
-if uploaded_profile:
-    profile.update(json.load(uploaded_profile))
+# ------------------ Referral Input ------------------
 
-profile["user_name"] = st.text_input("Your Full Name", value=profile["user_name"])
-profile["user_role"] = st.text_input("Current Role", value=profile["user_role"])
-profile["user_intro"] = st.text_area("Brief Description", value=profile["user_intro"])
-
-# Option to download profile
-st.download_button("💾 Save Profile", data=json.dumps(profile), file_name="profile.json", mime="application/json")
-
-# ------------------ Referral Form ------------------
-st.subheader("📨 Referral Details")
-
+st.subheader("📨 Referral Info")
 recipient_name = st.text_input("Recipient's Name*", placeholder="e.g., John")
 job_title = st.text_input("Job Title*", placeholder="e.g., Backend Engineer")
 company_name = st.text_input("Company Name*", placeholder="e.g., Google")
-job_link = st.text_input("Job Link*", placeholder="Paste the job URL")
-job_id = st.text_input("Job ID (optional)", placeholder="Optional")
-resume_link = st.text_input("Resume Link (optional)", placeholder="Google Drive or other URL")
+job_link = st.text_input("Job Link*", placeholder="https://...")
+job_id = st.text_input("Job ID (optional)")
+resume_link = st.text_input("Resume Link (optional)")
 
-brief_intro = st.text_area("Brief Intro*", value=profile["user_intro"])
+# ------------------ Generate ------------------
 
-# ------------------ Message Generator ------------------
-if st.button("Generate Referral Message"):
-    if not (recipient_name and job_title and company_name and job_link and brief_intro):
-        st.warning("⚠️ Please fill all required fields marked with *")
+if st.button("✨ Generate Message"):
+    if not all([recipient_name, job_title, company_name, job_link]):
+        st.warning("Please fill all required fields marked with *")
     else:
-        # Cleanly format optional fields
-        job_id_line = f"\nJob ID: {job_id}" if job_id.strip() else ""
-        resume_line = f"\nHere is my resume for reference: {resume_link}" if resume_link.strip() else ""
+        # Clean up optional parts
+        job_id_line = f"Job ID: {job_id}" if job_id.strip() else ""
+        resume_line = f"Here is my resume for reference: {resume_link}" if resume_link.strip() else ""
 
-        sender_name = profile["user_name"] or "Akshay Gupta"
+        intro = st.session_state.user_intro.strip()
+        name = st.session_state.user_name.strip()
 
+        # Compose message cleanly
         message_parts = [
-            f"Hi {recipient_name},\n",
+            f"Hi {recipient_name},",
             f"I hope you’re doing well! I came across an exciting opportunity for a {job_title} role at {company_name}, and I noticed that you’re connected with the company. Given your experience and position, I was wondering if you’d feel comfortable referring me for the role.",
-            f"\nJob Link: {job_link}",
+            f"Job Link: {job_link}",
             job_id_line,
-            f"\n\nA quick background about me — {brief_intro.strip()}",
+            f"A quick background about me — {intro}",
             resume_line,
-            "\n\nPlease let me know if you need any more information or context from my side.",
+            "Please let me know if you need any more information or context from my side.",
             "Thanks in advance for your support — I truly appreciate it!",
-            f"\nWarm regards,\n{sender_name}"
+            f"Warm regards,\n{name}"
         ]
 
-        # Filter out empty lines
-        message = "\n".join([part.strip() for part in message_parts if part.strip()])
+        final_message = "\n\n".join([line for line in message_parts if line.strip()])
 
-        st.success("Referral Message Generated! ✨")
-        st.text_area("📋 Copy your message:", value=message, height=350)
-        st.code(message, language="markdown")
+        st.success("Referral message generated! ✅")
+        st.text_area("📋 Copy your message:", final_message, height=350)
